@@ -1,73 +1,74 @@
-const fs = require('fs');
+const fs = require("fs");
 
 class Contenedor {
-    constructor(file) {
-        this.file = file;
+  constructor(file) {
+    this.file = file;
+  }
+
+  async getAll() {
+    try {
+      const data = await fs.promises.readFile(this.file, "utf-8");
+      return JSON.parse(data);
+    } catch (err) {
+      console.log("Error en getAll: ", err);
     }
-
-
-    writeFile = async data => {
-        try {
-            await fs.promises.writeFile(
-                this.file, JSON.stringify(data, null,2)
-            )
-        } catch (err) {
-            console.log(`error: ${err}`);
-        }
+  }
+  async save(product) {
+    try {
+      const data = await fs.promises.readFile(this.file, "utf-8");
+      const products = JSON.parse(data);
+      const lastId = products[products.length - 1].id;
+      const newProduct = { ...product, id: lastId + 1 };
+      products.push(newProduct);
+      await fs.promises.writeFile(this.file, JSON.stringify(products, null, 2));
+      console.log("Nuevo producto creado con id: " + newProduct.id);
+    } catch (err) {
+      const newProduct = { ...product, id: 1 };
+      await fs.promises.writeFile(
+        this.file,
+        JSON.stringify([newProduct], null, 2)
+      );
+      console.log("Nuevo producto creado con id: " + newProduct.id);
     }
+  }
 
-
-    getAll = async () => {
-        try {
-            const productos = await fs.promises.readFile(this.file, 'utf-8');
-            return JSON.parse(productos);
-        } catch (err) {
-            if (err.message.includes('no such file or directory')) return [];
-            console.log(`error: ${err}`);
-        }
+  async getById(id) {
+    try {
+      const products = await this.getAll();
+      const product = products.find((product) => product.id === id);
+      if (!product) {
+        console.log("null");
+      } else {
+        console.log("Producto con id", id, product);
+      }
+    } catch (err) {
+      throw new Error("No ha sido encontrado un producto con ese ID");
     }
+  }
 
-
-    save = async obj => {
-        let productos = this.getAll();
-        try {
-            let newId;
-            productos.length === 0 ? newId = 1 : newId = productos[productos.length - 1].id + 1;
-            let newObj = { ...obj, id: newId };
-            productos.push(newObj);
-            await this.writeFile(productos);
-            return newObj.id;
-        } catch (err) {
-            console.log(`error: ${err}`);
-        }
+  async deleteById(id) {
+    try {
+      const products = await this.getAll();
+      const product = products.find((product) => product.id === id);
+      if (!product) {
+        throw new Error("No ha sido encontrado un producto con ese ID");
+      }
+      const newProducts = products.filter((product) => product.id !== id);
+      await fs.promises.writeFile(
+        this.file,
+        JSON.stringify(newProducts, null, 2)
+      );
+    } catch (err) {
+      console.log("Error en deleteById: ", err);
     }
-
-
-    getById = async id => {
-        let productos = await this.getAll();
-        try {
-            const obj = productos.find(id => productos.id === id);
-            return obj ? obj : null;
-        } catch (err) {
-            console.log(`error: ${err}`);
-        }
+  }
+  async deleteAll() {
+    try {
+      await fs.promises.writeFile(this.file, JSON.stringify([], null, 2));
+    } catch (err) {
+      console.log("Error en deleteAll: ", err);
     }
-
-
-    deleteById = async id => {
-        let productos = await this.getAll();
-        try {
-            productos = productos.filter(producto => producto.id != id);
-            await this.writeFile(productos);
-        } catch (err) {
-            console.log(`error: ${err}`);
-        }
-    }
-    
-
-    deleteAll = async () => {
-        this.writeFile([]);
-    }
+  }
 }
 
 module.exports = Contenedor;
